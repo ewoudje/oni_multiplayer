@@ -1,4 +1,5 @@
 ﻿using MultiplayerMod.Core.Dependency;
+using MultiplayerMod.Core.Unity;
 using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Network;
 using UnityEngine;
@@ -6,11 +7,18 @@ using UnityEngine;
 namespace MultiplayerMod.Multiplayer.Components;
 
 // TODO: Replace with a game object with Image and Canvas components and draw it on the world canvas
-public class DrawCursorComponent : MonoBehaviour {
+public class DrawCursorComponent : MultiplayerMonoBehaviour {
 
-    private readonly IMultiplayerClient client = Container.Get<IMultiplayerClient>();
+    [Dependency]
+    private readonly IMultiplayerClient client = null!;
+
+    [Dependency]
+    private readonly MultiplayerGame multiplayer = null!;
+
     private Texture2D cursorTexture = null!;
     private Camera mainCamera = null!;
+    private PlayerCursor? prevCursor;
+    private PlayerCursor? currentCursor;
     private bool initialized;
 
     private void OnEnable() {
@@ -20,11 +28,23 @@ public class DrawCursorComponent : MonoBehaviour {
     }
 
     private void OnGUI() {
-        foreach (var (player, state) in MultiplayerGame.State.Players) {
+        foreach (var (player, state) in multiplayer.State.Players) {
             if (player.Equals(client.Player))
                 continue;
 
-            RenderCursor(state.CursorPosition);
+            prevCursor ??= state.Cursor;
+            currentCursor ??= state.Cursor;
+
+            if (currentCursor.LastUpdate != state.Cursor.LastUpdate) {
+                prevCursor = currentCursor;
+                currentCursor = state.Cursor;
+            }
+
+            float updateDelta = currentCursor.LastUpdate - prevCursor.LastUpdate;
+            var timeDiff = (System.DateTime.Now.Ticks - currentCursor.LastUpdate) / updateDelta;
+            var position = Vector2.Lerp(prevCursor.Position, currentCursor.Position, timeDiff);
+
+            RenderCursor(position);
         }
     }
 

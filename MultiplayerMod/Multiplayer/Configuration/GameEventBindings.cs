@@ -1,5 +1,4 @@
-﻿using MultiplayerMod.Core.Dependency;
-using MultiplayerMod.Core.Logging;
+﻿using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Core.Patch;
 using MultiplayerMod.Core.Patch.Context;
 using MultiplayerMod.Game.Mechanics.Objects;
@@ -22,20 +21,28 @@ using MultiplayerMod.Multiplayer.Commands.Screens.UserMenu;
 using MultiplayerMod.Multiplayer.Commands.Speed;
 using MultiplayerMod.Multiplayer.Commands.State;
 using MultiplayerMod.Multiplayer.Commands.Tools;
+using MultiplayerMod.Multiplayer.State;
 using MultiplayerMod.Multiplayer.Tools;
 using MultiplayerMod.Network;
 
 namespace MultiplayerMod.Multiplayer.Configuration;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class GameEventBindings {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GameEventBindings>();
 
-    private readonly IMultiplayerClient client = Container.Get<IMultiplayerClient>();
+    private readonly IMultiplayerClient client;
+    private readonly MultiplayerGame multiplayer;
 
     private readonly CommandRateThrottle throttle10Hz = new(rate: 10);
 
     private bool bound;
+
+    public GameEventBindings(IMultiplayerClient client, MultiplayerGame multiplayer) {
+        this.client = client;
+        this.multiplayer = multiplayer;
+    }
 
     public void Bind() {
         if (bound)
@@ -143,10 +150,15 @@ public class GameEventBindings {
     }
 
     private void BindMechanics() {
-        ObjectEvents.ComponentMethodCalled += args => client.Send(new CallMethod(args));
-        ObjectEvents.StateMachineMethodCalled += args => client.Send(new CallMethod(args));
+        ObjectEvents.ComponentMethodCalled += args => SendIfSpawned(new CallMethod(args));
+        ObjectEvents.StateMachineMethodCalled += args => SendIfSpawned(new CallMethod(args));
         TelepadEvents.AcceptDelivery += args => client.Send(new AcceptDelivery(args));
         TelepadEvents.Reject += reference => client.Send(new RejectDelivery(reference));
+    }
+
+    private void SendIfSpawned(IMultiplayerCommand command) {
+        if (multiplayer.State.Current.WorldSpawned)
+            client.Send(command);
     }
 
     private void BindSideScreens() {
