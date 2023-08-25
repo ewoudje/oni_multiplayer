@@ -1,6 +1,7 @@
 ﻿extern alias ValveSockets;
 using System;
 using System.Text;
+using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
@@ -15,6 +16,7 @@ using ValveSockets::Valve.Sockets;
 
 namespace MultiplayerMod.Platform.Gns.Network;
 
+[UsedImplicitly]
 public class GnsClient : BaseClient {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GnsClient>();

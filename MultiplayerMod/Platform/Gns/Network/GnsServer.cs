@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using JetBrains.Annotations;
 using MultiplayerMod.Core.Collections;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
@@ -16,6 +17,7 @@ using Configuration = ValveSockets::Valve.Sockets.Configuration;
 
 namespace MultiplayerMod.Platform.Gns.Network;
 
+[UsedImplicitly]
 public class GnsServer : BaseServer {
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GnsServer>();
 
