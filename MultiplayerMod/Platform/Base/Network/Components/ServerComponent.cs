@@ -4,8 +4,9 @@ using UnityEngine;
 
 namespace MultiplayerMod.Platform.Base.Network.Components;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class ServerComponent : MonoBehaviour {
     private BaseServer server = null!;
-    private void Awake() => server = (BaseServer) Container.Get<IMultiplayerServer>();
+    private void Awake() => server = (BaseServer) Dependencies.Get<IMultiplayerServer>();
     private void Update() => server.Tick();
 }

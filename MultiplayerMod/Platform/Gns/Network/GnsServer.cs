@@ -21,19 +21,18 @@ public class GnsServer : BaseServer {
 
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
-    private readonly Dictionary<IPlayer, uint> players = new();
-    protected override List<IPlayer> getPlayers() => new(players.Keys);
-    protected override IMultiplayerEndpoint getEndpoint() => new DevServerEndpoint();
+    private readonly Dictionary<IPlayerIdentity, uint> players = new();
+    protected override IMultiplayerEndpoint GetEndpoint() => new DevServerEndpoint();
 
-    private IPlayer currentPlayer = null!;
+    private IPlayerIdentity currentPlayer = null!;
     private NetworkingSockets devServer = null!;
     private uint devPollGroup;
     private uint unidentifiedPollGroup;
     private uint devListenSocket;
 
+    public override List<IPlayerIdentity> Players => players.Keys.ToList();
+
     public void StatusCallback(ref StatusInfo info) {
-        if (devServer == null)
-            return;
 
         switch (info.connectionInfo.state) {
             case ConnectionState.None:
@@ -54,6 +53,8 @@ public class GnsServer : BaseServer {
                     " " + info.connectionInfo.state
                 );
                 break;
+            case ConnectionState.FindingRoute:
+                break;
         }
     }
 
@@ -68,13 +69,13 @@ public class GnsServer : BaseServer {
         }
     }
 
-    public override void Send(IPlayer player, IMultiplayerCommand command) {
+    public override void Send(IPlayerIdentity player, IMultiplayerCommand command) {
         var connections = new SingletonCollection<uint>(players[player]);
         SendCommand(command, MultiplayerCommandOptions.None, connections);
     }
 
     public override void Send(IMultiplayerCommand command, MultiplayerCommandOptions options) {
-        IEnumerable<KeyValuePair<IPlayer, uint>> recipients = players;
+        IEnumerable<KeyValuePair<IPlayerIdentity, uint>> recipients = players;
         if (options.HasFlag(MultiplayerCommandOptions.SkipHost))
             recipients = recipients.Where(entry => !entry.Key.Equals(currentPlayer));
 
@@ -170,7 +171,7 @@ public class GnsServer : BaseServer {
             log.Error($"Failed to send message, result: {result}");
     }
 
-    protected override void doStart() {
+    protected override void DoStart() {
         log.Debug("Starting...");
         SetState(MultiplayerServerState.Preparing);
         SetState(MultiplayerServerState.Starting);

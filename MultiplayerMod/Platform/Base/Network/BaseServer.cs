@@ -13,33 +13,30 @@ namespace MultiplayerMod.Platform.Base.Network;
 public abstract class BaseServer : IMultiplayerServer {
 
     public MultiplayerServerState State { protected set; get; } = MultiplayerServerState.Stopped;
+    public abstract List<IPlayerIdentity> Players { get; }
 
     public IMultiplayerEndpoint Endpoint {
         get {
             if (State != MultiplayerServerState.Started)
                 throw new NetworkPlatformException("Server isn't started");
 
-            return getEndpoint();
+            return GetEndpoint();
         }
     }
 
-    protected abstract IMultiplayerEndpoint getEndpoint();
-    protected abstract List<IPlayer> getPlayers();
-
-    public List<IPlayer> Players => getPlayers();
-
+    protected abstract IMultiplayerEndpoint GetEndpoint();
     public event Action<ServerStateChangedEventArgs>? StateChanged;
-    public event Action<IPlayer>? PlayerConnected;
-    public event Action<IPlayer>? PlayerDisconnected;
+    public event Action<IPlayerIdentity>? PlayerConnected;
+    public event Action<IPlayerIdentity>? PlayerDisconnected;
     public event Action<CommandReceivedEventArgs>? CommandReceived;
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<BaseServer>();
 
-    protected void OnPlayerConnected(IPlayer player) {
+    protected void OnPlayerConnected(IPlayerIdentity player) {
         PlayerConnected?.Invoke(player);
     }
 
-    protected void OnPlayerDisconnected(IPlayer player) {
+    protected void OnPlayerDisconnected(IPlayerIdentity player) {
         PlayerDisconnected?.Invoke(player);
     }
 
@@ -49,7 +46,7 @@ public abstract class BaseServer : IMultiplayerServer {
 
     private GameObject? gameObject;
 
-    protected abstract void doStart();
+    protected abstract void DoStart();
 
     public void Start() {
         if (!SteamManager.Initialized)
@@ -58,7 +55,7 @@ public abstract class BaseServer : IMultiplayerServer {
         log.Debug("Starting...");
         SetState(MultiplayerServerState.Preparing);
         try {
-            doStart();
+            DoStart();
         } catch (Exception) {
             Reset();
             SetState(MultiplayerServerState.Error);
@@ -80,7 +77,7 @@ public abstract class BaseServer : IMultiplayerServer {
 
     public abstract void Tick();
 
-    public abstract void Send(IPlayer player, IMultiplayerCommand command);
+    public abstract void Send(IPlayerIdentity player, IMultiplayerCommand command);
 
     public abstract void Send(IMultiplayerCommand command, MultiplayerCommandOptions options);
 

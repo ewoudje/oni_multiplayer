@@ -8,10 +8,10 @@ using UnityEngine;
 namespace MultiplayerMod.Platform.Base.Network;
 
 public abstract class BaseClient : IMultiplayerClient {
-
-    public IPlayer Player => getPlayer().Value;
-    protected abstract Lazy<IPlayer> getPlayer();
     public MultiplayerClientState State { get; private set; } = MultiplayerClientState.Disconnected;
+
+    public abstract IPlayerIdentity Player { get; }
+
     public event Action<MultiplayerClientState>? StateChanged;
     public event Action<CommandReceivedEventArgs>? CommandReceived;
 
@@ -19,7 +19,7 @@ public abstract class BaseClient : IMultiplayerClient {
         CommandReceived?.Invoke(args);
     }
 
-    protected GameObject gameObject = null!;
+    protected GameObject GameObject = null!;
 
     public abstract void Connect(IMultiplayerEndpoint endpoint);
 
@@ -27,12 +27,12 @@ public abstract class BaseClient : IMultiplayerClient {
         if (State <= MultiplayerClientState.Disconnected)
             throw new NetworkPlatformException("Client not connected");
 
-        if (gameObject)
-            UnityObject.Destroy(gameObject);
-        doDisconnect();
+        if (GameObject)
+            UnityObject.Destroy(GameObject);
+        DoDisconnect();
     }
 
-    protected virtual void doDisconnect() { }
+    protected virtual void DoDisconnect() { }
 
     public abstract void Tick();
 

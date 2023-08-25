@@ -21,15 +21,16 @@ namespace MultiplayerMod.Platform.Steam.Network;
 public class SteamClient : BaseClient {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<SteamClient>();
-    private readonly SteamLobby lobby = Container.Get<SteamLobby>();
-    private readonly Lazy<IPlayer> playerContainer = new(() => new SteamPlayer(SteamUser.GetSteamID()));
-    protected override Lazy<IPlayer> getPlayer() => playerContainer;
+    private readonly SteamLobby lobby = Dependencies.Get<SteamLobby>();
+    private readonly SteamPlayer player= new SteamPlayer(SteamUser.GetSteamID());
 
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
 
     private HSteamNetConnection connection = HSteamNetConnection.Invalid;
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { SteamConfiguration.SendBufferSize() };
+
+    public override IPlayerIdentity Player => player;
 
     public override void Connect(IMultiplayerEndpoint endpoint) {
         if (!SteamManager.Initialized)
@@ -53,12 +54,12 @@ public class SteamClient : BaseClient {
         lobby.Join(steamServerEndpoint.LobbyID);
     }
 
-    protected override void doDisconnect() {
+    protected override void DoDisconnect() {
         if (State <= MultiplayerClientState.Disconnected)
             throw new NetworkPlatformException("Client not connected");
 
         SetState(MultiplayerClientState.Disconnected);
-        UnityObject.Destroy(gameObject);
+        UnityObject.Destroy(GameObject);
         lobby.Leave();
         lobby.OnJoin -= OnLobbyJoin;
         SteamNetworkingSockets.CloseConnection(connection, (int) k_ESteamNetConnectionEnd_App_Generic, "", false);
@@ -110,7 +111,7 @@ public class SteamClient : BaseClient {
 
         SetRichPresence();
 
-        gameObject = UnityObject.CreateStaticWithComponent<ClientComponent>();
+        GameObject = UnityObject.CreateStaticWithComponent<ClientComponent>();
         SetState(MultiplayerClientState.Connected);
     }
 

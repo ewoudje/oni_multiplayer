@@ -8,7 +8,7 @@ namespace MultiplayerMod.Platform.Gns;
 public class GnsMultiplayerOperations : IMultiplayerOperations {
 
     public void Join() {
-        Container.Get<IMultiplayerClient>().Connect(new DevServerEndpoint());
+        Dependencies.Get<IMultiplayerClient>().Connect(new DevServerEndpoint());
     }
 
 }

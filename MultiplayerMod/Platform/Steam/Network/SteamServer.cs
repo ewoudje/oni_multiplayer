@@ -38,14 +38,15 @@ public class SteamServer : BaseServer {
     private readonly SteamNetworkingConfigValue_t[] networkConfig = { SteamConfiguration.SendBufferSize() };
     private Callback<SteamNetConnectionStatusChangedCallback_t> connectionStatusChangedCallback = null!;
 
-    private readonly Dictionary<IPlayer, HSteamNetConnection> players = new();
-    protected override IMultiplayerEndpoint getEndpoint() => new SteamServerEndpoint(lobby.Id);
-    protected override List<IPlayer> getPlayers() => new(players.Keys);
-    private readonly IPlayer currentPlayer = new SteamPlayer(SteamUser.GetSteamID());
+    private readonly Dictionary<IPlayerIdentity, HSteamNetConnection> players = new();
+    protected override IMultiplayerEndpoint GetEndpoint() => new SteamServerEndpoint(lobby.Id);
+    private readonly IPlayerIdentity currentPlayer = new SteamPlayer(SteamUser.GetSteamID());
 
-    private readonly SteamLobby lobby = Container.Get<SteamLobby>();
+    private readonly SteamLobby lobby = Dependencies.Get<SteamLobby>();
 
-    protected override void doStart() {
+    public override List<IPlayerIdentity> Players => players.Keys.ToList();
+
+    protected override void DoStart() {
         if (!SteamManager.Initialized)
             throw new NetworkPlatformException("Steam API is not initialized");
 
@@ -71,13 +72,13 @@ public class SteamServer : BaseServer {
         }
     }
 
-    public override void Send(IPlayer player, IMultiplayerCommand command) {
+    public override void Send(IPlayerIdentity player, IMultiplayerCommand command) {
         var connections = new SingletonCollection<HSteamNetConnection>(players[player]);
         SendCommand(command, MultiplayerCommandOptions.None, connections);
     }
 
     public override void Send(IMultiplayerCommand command, MultiplayerCommandOptions options) {
-        IEnumerable<KeyValuePair<IPlayer, HSteamNetConnection>> recipients = players;
+        IEnumerable<KeyValuePair<IPlayerIdentity, HSteamNetConnection>> recipients = players;
         if (options.HasFlag(MultiplayerCommandOptions.SkipHost))
             recipients = recipients.Where(entry => !entry.Key.Equals(currentPlayer));
 
@@ -96,7 +97,7 @@ public class SteamServer : BaseServer {
                 _ => OnServerStarted(),
                 callbacksCancellationTokenSource.Token,
                 TaskContinuationOptions.None,
-                Container.Get<UnityTaskScheduler>()
+                Dependencies.Get<UnityTaskScheduler>()
             );
 
         lobby.OnCreate += OnLobbyCreated;
@@ -161,7 +162,7 @@ public class SteamServer : BaseServer {
                 steamMessage.GetNetworkMessageHandle()
             );
             if (message != null) {
-                IPlayer player = new SteamPlayer(steamMessage.m_identityPeer.GetSteamID());
+                IPlayerIdentity player = new SteamPlayer(steamMessage.m_identityPeer.GetSteamID());
                 if (message.Options.HasFlag(MultiplayerCommandOptions.ExecuteOnServer)) {
                     OnCommandReceived(new CommandReceivedEventArgs(player, message.Command));
                 } else {

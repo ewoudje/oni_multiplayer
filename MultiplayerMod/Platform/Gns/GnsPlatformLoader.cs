@@ -17,6 +17,7 @@ public class CleanupPatch {
     }
 };
 
+// ReSharper disable once UnusedType.Global
 public class GnsPlatformLoader : IModComponentLoader {
 
     private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GnsPlatformLoader>();
@@ -26,11 +27,11 @@ public class GnsPlatformLoader : IModComponentLoader {
             return;
 
         log.Info("No steam platform detected");
-        Container.Register<IMultiplayerOperations, GnsMultiplayerOperations>();
+        Dependencies.Register<IMultiplayerOperations, GnsMultiplayerOperations>();
 
         Library.Initialize();
-        Container.Register<IMultiplayerServer, GnsServer>();
-        Container.Register<IMultiplayerClient, GNSClient>();
+        Dependencies.Register<IMultiplayerServer, GnsServer>();
+        Dependencies.Register<IMultiplayerClient, GnsClient>();
     }
 
 }

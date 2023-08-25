@@ -15,13 +15,12 @@ using ValveSockets::Valve.Sockets;
 
 namespace MultiplayerMod.Platform.Gns.Network;
 
-public class GNSClient : BaseClient {
+public class GnsClient : BaseClient {
 
-    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GNSClient>();
+    private readonly Core.Logging.Logger log = LoggerFactory.GetLogger<GnsClient>();
 
-    public static string Identity = "server";
-    private readonly Lazy<IPlayer> playerContainer = new(() => new DevPlayer(Identity));
-    protected override Lazy<IPlayer> getPlayer() => playerContainer;
+    public static readonly string Identity = "server";
+    private readonly DevPlayer player = new(Identity);
 
     private readonly NetworkMessageProcessor messageProcessor = new();
     private readonly NetworkMessageFactory messageFactory = new();
@@ -33,17 +32,17 @@ public class GNSClient : BaseClient {
 
     private int reconnectAttempts = 0;
 
-    private GnsServer getServer() {
-        return (GnsServer) Container.Get<IMultiplayerServer>();
+    public override IPlayerIdentity Player => player;
+
+    private static GnsServer GetServer() {
+        return (GnsServer) Dependencies.Get<IMultiplayerServer>();
     }
 
-    private void forwardStatusCallbackToServer(ref StatusInfo info) {
-        var server = getServer();
-        if (server != null)
-            server.StatusCallback(ref info);
+    private static void ForwardStatusCallbackToServer(ref StatusInfo info) {
+        GetServer().StatusCallback(ref info);
     }
 
-    private void connectToServer() {
+    private void ConnectToServer() {
         log.Info($"Client connecting... with identity '{Identity}'");
         Address address = new Address();
         address.SetAddress("127.0.0.1", 8081);
@@ -55,7 +54,7 @@ public class GNSClient : BaseClient {
 
     private void statusCallback(ref StatusInfo info) {
         if (info.connection != devConnection) {
-            forwardStatusCallbackToServer(ref info);
+            ForwardStatusCallbackToServer(ref info);
             return;
         }
 
@@ -81,7 +80,7 @@ public class GNSClient : BaseClient {
                 if (reconnectAttempts < 20) {
                     reconnectAttempts++;
                     log.Info($"Attempting to reconnect {reconnectAttempts} times.");
-                    connectToServer();
+                    ConnectToServer();
                 } else {
                     log.Warning($"Maximum reconnect attempts reached. Won't try to reconnect.");
                 }
@@ -91,7 +90,7 @@ public class GNSClient : BaseClient {
 
     private DebugCallback debug = null!;
 
-    private void debugCallback(DebugType type, string message) {
+    private void DebugCallback(DebugType type, string message) {
         if (type > DebugType.Message)
             return;
 
@@ -99,20 +98,17 @@ public class GNSClient : BaseClient {
     }
 
     public override void Connect(IMultiplayerEndpoint endpoint) {
-        if (endpoint == null)
-            Identity = "client";
-
         devClient = new NetworkingSockets();
 
         utils = new NetworkingUtils();
         status = (ref StatusInfo info) => this.statusCallback(ref info);
         utils.SetStatusCallback(status);
-        debug = (DebugType type, string message) => this.debugCallback(type, message);
+        debug = DebugCallback;
         // utils.SetDebugCallback(DebugType.Message, debug);
 
         SetState(MultiplayerClientState.Connecting);
-        connectToServer();
-        gameObject = UnityObject.CreateStaticWithComponent<ClientComponent>();
+        ConnectToServer();
+        GameObject = UnityObject.CreateStaticWithComponent<ClientComponent>();
         // Run callbacks immediately so that the client on the server reacts to the
         // connection in a timely manner. Otherwise the connection would fail with
         // problem detected locally:
@@ -154,10 +150,10 @@ public class GNSClient : BaseClient {
         const int maxMessages = 20;
 
         NetworkingMessage[] netMessages = new NetworkingMessage[maxMessages];
-        int netMessagesCount = devClient.ReceiveMessagesOnConnection(devConnection, netMessages, maxMessages);
+        var netMessagesCount = devClient.ReceiveMessagesOnConnection(devConnection, netMessages, maxMessages);
         log.Info($"netMessagesCount = {netMessagesCount}");
-        for (int i = 0; i < netMessagesCount; i++) {
-            ref NetworkingMessage netMessage = ref netMessages[i];
+        for (var i = 0; i < netMessagesCount; i++) {
+            ref var netMessage = ref netMessages[i];
 
             log.Info(
                 "Message received from server - Channel ID: " + netMessage.channel + ", Data length: " +

@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Game;
+using MultiplayerMod.Multiplayer.Dev;
 using MultiplayerMod.Multiplayer.State;
 
 namespace MultiplayerMod.Multiplayer.Patches;
@@ -14,6 +15,8 @@ internal class MainMenuPatch {
     // ReSharper disable once UnusedMember.Local
     private static void OnPrefabInit(MainMenu __instance) {
         Dependencies.Get<MultiplayerGame>().Refresh();
+        DevCommandListener.ActivateDevCommands();
+
         var operations = Dependencies.Get<IMultiplayerOperations>();
         __instance.AddButton("NEW MULTIPLAYER", highlight: true, CreateHostWrapper(__instance.NewGame));
         __instance.AddButton("LOAD MULTIPLAYER", highlight: false, CreateHostWrapper(__instance.LoadGame));
